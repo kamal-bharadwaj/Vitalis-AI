@@ -1,0 +1,217 @@
+Design a professional desktop-first healthcare AI platform called Vitalis AI.
+Do NOT generate mobile app screens.
+Do NOT generate marketing pages.
+Do NOT generate cards with doctor portrait photos.
+Do NOT generate multiple disconnected screens.
+Create ONE cohesive desktop dashboard application similar to:
+
+
+Linear
+
+
+Notion
+
+
+ChatGPT Team
+
+
+Cursor
+
+
+Google Cloud Console
+
+
+Stripe Dashboard
+
+
+The application should feel like a serious healthcare productivity platform used daily by patients and clinicians.
+
+Layout Structure
+Use a 3-panel desktop layout.
+Left Sidebar (280px)
+Persistent navigation.
+Sections:
+Dashboard
+Medical Records
+Uploads
+AI Consultation
+Recipes
+Health Insights
+History
+Settings
+At the bottom:
+User Profile
+Theme Switch
+Storage Usage
+The sidebar should remain fixed while scrolling.
+
+Center Workspace
+This is the primary working area.
+Create a patient workspace.
+Top section:
+Patient Name
+Recent Report Status
+Risk Score
+Last Analysis Date
+Below:
+Health Overview Cards
+Blood Pressure
+Blood Sugar
+Triglycerides
+Cholesterol
+BMI
+Each card contains:
+Current Value
+Status
+Trend
+Mini Chart
+Color Indicator
+Arrange in a responsive grid.
+
+Right AI Panel
+Persistent AI assistant panel.
+Looks similar to ChatGPT.
+Contains:
+Conversation History
+Suggested Questions
+Message Input
+Voice Button
+File Attachment
+Streaming Responses
+This panel should always remain visible.
+Width approximately 420px.
+
+Upload Experience
+Create a large upload area inside the workspace.
+Display:
+Drag and Drop Zone
+Upload Button
+OCR Status
+Processing Status
+File List
+Analysis Progress
+Use a professional enterprise style.
+No illustrations.
+No stock photos.
+No decorative imagery.
+
+OCR Processing Visualization
+Show a horizontal pipeline:
+Upload
+OCR
+Data Cleaning
+Medical Analysis
+Summary Generation
+Complete
+Each stage shows:
+Progress
+Status
+Completion State
+
+Health Summary Section
+Create a dashboard card.
+Display:
+Conditions
+Allergies
+Medications
+Dietary Restrictions
+Recent Alerts
+Use chips and structured tables.
+Not portrait cards.
+Not profile cards.
+
+AI Recommendations
+Display AI output using structured sections.
+What To Eat
+Recommended foods
+Nutrition notes
+What To Avoid
+Restricted foods
+Risk explanations
+Alternatives
+Safer replacements
+All sections should be expandable cards.
+
+Critical Alerts
+Create a dedicated emergency panel.
+Examples:
+High Blood Pressure
+Abnormal Glucose
+Medication Conflict
+Visual treatment:
+Red accent
+Warning icon
+Sticky notification area
+
+Recipes Module
+Create a recipe analyzer screen.
+Input ingredients.
+Display:
+Safe Ingredients
+Risky Ingredients
+Alternative Ingredients
+Nutrition Breakdown
+Safety Score
+
+Visual Design
+Use a clean enterprise SaaS aesthetic.
+NOT glassmorphism.
+NOT neumorphism.
+NOT futuristic holograms.
+Use:
+White surfaces
+Subtle borders
+Soft shadows
+Excellent spacing
+Professional typography
+Modern healthcare dashboard styling
+Reference:
+Stripe
+Linear
+Vercel
+Google Cloud
+Notion
+Cursor
+OpenAI ChatGPT Team
+
+Colors
+Primary Blue:
+#2563EB
+Success Green:
+#16A34A
+Warning:
+#F59E0B
+Danger:
+#DC2626
+Neutral Grays
+Avoid overly colorful gradients.
+
+Typography
+Inter
+Clean hierarchy
+Large dashboard headings
+Readable body text
+Dense information display
+Enterprise software style
+
+Motion
+Use subtle production-grade animations.
+Use Framer Motion.
+Examples:
+Sidebar transitions
+Panel resizing
+Card hover elevation
+Progress updates
+Loading skeletons
+AI message appearance
+Expandable recommendation sections
+Avoid flashy animations.
+Motion should feel like:
+Linear
+Cursor
+ChatGPT
+Modern SaaS applications
+
+Final Goal
+Generate a realistic desktop healthcare AI dashboard that feels like a production application, not a mobile mockup, not a marketing landing page, and not a collection of doctor profile cards.
+The design should look ready to hand directly to a React + Next.js engineering team for implementation.
