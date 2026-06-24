@@ -24,9 +24,11 @@ app.add_middleware(
 
 from api.chat import router as chat_router
 from api.upload import router as upload_router
+from api.recipes import router as recipes_router
 
 app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 app.include_router(upload_router, prefix="/api/upload", tags=["upload"])
+app.include_router(recipes_router, prefix="/api/recipes", tags=["recipes"])
 
 @app.get("/")
 def read_root():

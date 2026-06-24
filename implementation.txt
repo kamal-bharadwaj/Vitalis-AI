@@ -1,0 +1,103 @@
+Vitalis AI - Virtual Healthcare Assistant Implementation Plan
+Build a Minimum Viable Product (MVP) for Vitalis AI, a secure, virtual healthcare assistant. The system will ingest medical documents, perform OCR and data extraction, store information in a vector database, and use a RAG pipeline with strict safety guardrails to provide dietary and medical insights based on static knowledge and patient history. The frontend will be a cohesive, 3-panel desktop React/Next.js application.
+
+User Review Required
+IMPORTANT
+
+Based on your request for the best free tools to make the project functional first, I have selected the following stack for the MVP:
+
+OCR Engine: PyTesseract (Free, open-source, runs locally. Perfect for an MVP before scaling to paid cloud services).
+Vector Database: ChromaDB (Free, open-source, runs entirely locally, requires no cloud setup).
+LLM Provider: Groq API (with Llama 3) or Google Gemini API. Both offer excellent, highly capable free tiers. Alternatively, if you want 100% data privacy for medical records, we can use Ollama to run models completely locally (requires local installation).
+Open Questions
+WARNING
+
+For the LLM, would you prefer to use a free cloud API (like Groq or Gemini) which is easier to set up, or run Ollama locally for maximum medical data privacy?
+Are you ready for me to begin executing Phase 1 (Backend Initialization & API) now?
+Proposed Changes
+Phase 1: Project Scaffolding & Environment Setup
+Establish the monorepo structure with FastAPI and Next.js.
+
+[NEW] 
+backend/requirements.txt
+Define Python dependencies (FastAPI, SQLAlchemy, Langchain, etc.).
+
+[NEW] 
+backend/main.py
+Initialize FastAPI app, configure CORS, and load environment variables.
+
+[NEW] 
+backend/database.py
+PostgreSQL connection setup and basic session metadata models.
+
+[NEW] 
+backend/api/chat.py
+Baseline chat endpoint connecting to the LLM.
+
+Phase 2: Document Ingestion & Text Processing Pipeline
+[NEW] 
+backend/api/upload.py
+FastAPI endpoint to handle multi-format file uploads (PDF, JPEG, PNG).
+
+[NEW] 
+backend/services/ocr.py
+Integration with chosen OCR engine to extract raw text.
+
+[NEW] 
+backend/services/preprocessing.py
+Scripts for deterministic parsing, unit normalization, and PII redaction using SpaCy.
+
+Phase 3: Building the RAG Core Architecture
+[NEW] 
+backend/services/rag.py
+Implement RecursiveCharacterTextSplitter and embedding logic. Setup vector database connections with static_medical_knowledge and patient_history namespaces. Implement hybrid retrieval logic (BM25 + Vector).
+
+Phase 4: Safety Guardrails & Strict Prompt Engineering
+[NEW] 
+backend/middleware/triage.py
+Deterministic triage to short-circuit the LLM and issue hardcoded warnings for critical values (e.g., high BP).
+
+[NEW] 
+backend/prompts/dietitian.py
+Strict system prompt template enforcing Markdown sections (What to Eat, What to Avoid, Recommended Alternatives).
+
+Phase 5: Advanced Personalization Features
+[NEW] 
+backend/services/personalization.py
+Logic to append explicit constraint text to queries based on cross-referenced conditions and allergies.
+
+[NEW] 
+backend/api/recipes.py
+Endpoint to query static knowledge for recipe safety checking and alternative generation.
+
+Phase 6: Frontend Integration
+Create a React/Next.js application adhering to the stitch prompt design specifications (3-panel layout, enterprise SaaS aesthetic).
+
+[NEW] 
+frontend/package.json
+Next.js app initialization with Framer Motion and UI libraries.
+
+[NEW] 
+frontend/app/layout.tsx
+Main layout wrapper incorporating the 3-panel desktop structure.
+
+[NEW] 
+frontend/components/LeftSidebar.tsx
+Persistent navigation panel (Dashboard, Medical Records, etc.).
+
+[NEW] 
+frontend/components/CenterWorkspace.tsx
+Patient workspace with health overview cards, OCR pipeline visualization, and file upload zone.
+
+[NEW] 
+frontend/components/RightAIPanel.tsx
+Persistent AI assistant chat interface with message history and input.
+
+Verification Plan
+Automated Tests
+Run pytest on data normalization and PII redaction functions.
+Run pytest on triage middleware to verify it successfully catches critical health values and short-circuits.
+Manual Verification
+Upload mock health reports with known values to verify OCR extraction accuracy and RAG retrieval.
+Verify the LLM output strictly follows the required format (### 🍏 What to Eat, etc.).
+Validate the frontend matches the 3-panel layout and enterprise SaaS aesthetic across standard desktop resolutions.
