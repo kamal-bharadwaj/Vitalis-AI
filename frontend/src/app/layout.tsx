@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import LeftSidebar from "@/components/LeftSidebar";
-import RightAIPanel from "@/components/RightAIPanel";
+import { AuthProvider } from "@/context/AuthContext";
+import OfflineBanner from "@/components/OfflineBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,13 +18,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.className} h-full antialiased`}>
-      <body className="min-h-full flex bg-gray-50 text-gray-900">
-        <LeftSidebar />
-        <div className="flex-1 flex flex-col min-h-screen relative overflow-x-hidden">
+      <body className="min-h-full bg-gray-50 text-gray-900">
+        <AuthProvider>
+          <OfflineBanner />
           {children}
-        </div>
-        <RightAIPanel />
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

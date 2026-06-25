@@ -16,7 +16,7 @@ app = FastAPI(title="Vitalis AI Backend", description="API for Healthcare Assist
 # CORS middleware to allow Next.js frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For dev purposes
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,11 +25,14 @@ app.add_middleware(
 from api.chat import router as chat_router
 from api.upload import router as upload_router
 from api.recipes import router as recipes_router
+from api.admin import router as admin_router
 
 app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 app.include_router(upload_router, prefix="/api/upload", tags=["upload"])
 app.include_router(recipes_router, prefix="/api/recipes", tags=["recipes"])
+app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Vitalis AI API is running."}
+

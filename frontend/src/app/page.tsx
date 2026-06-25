@@ -1,5 +1,5 @@
-import CenterWorkspace from "@/components/CenterWorkspace";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <CenterWorkspace />;
+  redirect('/dashboard');
 }
