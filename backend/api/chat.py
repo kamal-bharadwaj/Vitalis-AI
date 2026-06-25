@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from services.rag import rag_service
 from middleware.triage import check_critical_vitals
+from middleware.auth import verify_firebase_token
 from prompts.dietitian import dietitian_prompt
 import os
 
@@ -16,7 +17,10 @@ class ChatResponse(BaseModel):
     reply: str
 
 @router.post("/", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(
+    request: ChatRequest,
+    user: dict = Depends(verify_firebase_token)
+):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY environment variable is missing")
@@ -27,8 +31,8 @@ async def chat_endpoint(request: ChatRequest):
         return ChatResponse(reply=critical_alert)
         
     try:
-        # 2. Hybrid RAG Retrieval
-        context = rag_service.retrieve_context(request.message, k=3)
+        # 2. Hybrid RAG Retrieval (Isolated by user UID)
+        context = rag_service.retrieve_context(request.message, uid=user["uid"], k=3)
         patient_ctx_str = "\n".join(context["patient_context"]) if context["patient_context"] else "No patient records available."
         medical_ctx_str = "\n".join(context["medical_context"]) if context["medical_context"] else "No static guidelines available."
         

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Paperclip, Send, Bot, User as UserIcon, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -9,6 +10,7 @@ type Message = {
 };
 
 export default function RightAIPanel() {
+  const { getIdToken } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "I've analyzed your latest blood report. Your LDL cholesterol is slightly elevated at 110 mg/dL. Would you like a personalized diet plan to help manage this?" }
   ]);
@@ -33,11 +35,18 @@ export default function RightAIPanel() {
     setIsLoading(true);
 
     try {
+      const token = await getIdToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('http://127.0.0.1:8000/api/chat/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({ message: userMsg })
       });
 

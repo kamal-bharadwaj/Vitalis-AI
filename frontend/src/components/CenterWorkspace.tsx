@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, AlertTriangle, FileText, ArrowUpRight, ArrowDownRight, Activity, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const healthMetrics = [
   { name: 'Blood Pressure', value: '120/80', unit: 'mmHg', status: 'Normal', trend: 'down', color: 'bg-green-500' },
@@ -12,6 +13,7 @@ const healthMetrics = [
 ];
 
 export default function CenterWorkspace() {
+  const { getIdToken } = useAuth();
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
@@ -35,8 +37,15 @@ export default function CenterWorkspace() {
 
     try {
       setUploadStatus('processing');
+      const token = await getIdToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('http://127.0.0.1:8000/api/upload/', {
         method: 'POST',
+        headers,
         body: formData,
       });
 

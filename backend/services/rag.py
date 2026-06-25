@@ -40,11 +40,11 @@ class RAGService:
             persist_directory=self.persist_directory
         )
 
-    def ingest_patient_document(self, clean_text: str, source_id: str):
+    def ingest_patient_document(self, clean_text: str, source_id: str, uid: str):
         """Chunks and embeds processed OCR text into the patient history vector database."""
         chunks = self.text_splitter.create_documents(
             texts=[clean_text],
-            metadatas=[{"source_id": source_id}]
+            metadatas=[{"source_id": source_id, "uid": uid}]
         )
         self.patient_db.add_documents(chunks)
         # Note: In newer versions of Chroma/Langchain, persistent is automatic or handled implicitly,
@@ -60,12 +60,12 @@ class RAGService:
         self.knowledge_db.add_documents(chunks)
         self.knowledge_db.persist()
 
-    def retrieve_context(self, query: str, k: int = 3):
+    def retrieve_context(self, query: str, uid: str, k: int = 3):
         """
         Retrieves the most relevant context chunks from both namespaces simultaneously.
         """
-        # Retrieve from Patient History
-        patient_docs = self.patient_db.similarity_search(query, k=k)
+        # Retrieve from Patient History isolated by user ID
+        patient_docs = self.patient_db.similarity_search(query, k=k, filter={"uid": uid})
         
         # Retrieve from Static Medical Knowledge
         knowledge_docs = self.knowledge_db.similarity_search(query, k=k)
