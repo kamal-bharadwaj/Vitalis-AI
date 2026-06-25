@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 from services.rag import rag_service
 from middleware.triage import check_critical_vitals
 from prompts.dietitian import dietitian_prompt

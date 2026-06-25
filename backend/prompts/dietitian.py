@@ -1,4 +1,4 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 DIETITIAN_SYSTEM_TEMPLATE = """
 You are an expert clinical virtual dietitian assistant. You are given two pieces of context:
