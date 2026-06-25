@@ -13,7 +13,7 @@ from firebase_admin import credentials, auth
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────
 # Replace this with the email you used to register your admin account
-ADMIN_EMAIL = "your.email@gmail.com"
+ADMIN_EMAIL = "kamal.bharadwj@gmail.com"
 # ───────────────────────────────────────────────────────────────────────────
 
 def set_admin_claim():
