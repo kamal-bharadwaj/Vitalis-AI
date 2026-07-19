@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       .eq('id', documentId)
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Process handler error:', error)
     
     // Update status to failed if we have a documentId
@@ -107,8 +107,10 @@ export async function POST(request: Request) {
         .eq('id', documentId)
     }
 
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
+
     return NextResponse.json(
-      { error: error.message || 'Internal server error' }, 
+      { error: errorMessage }, 
       { status: 500 }
     )
   }

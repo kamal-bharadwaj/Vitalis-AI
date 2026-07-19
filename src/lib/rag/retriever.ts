@@ -3,7 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 export interface RetrievedChunk {
   id: string
   content: string
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
+  similarity: number
+}
+
+interface DatabaseChunk {
+  id: string
+  content: string
+  metadata: Record<string, unknown> | null
   similarity: number
 }
 
@@ -26,8 +33,10 @@ export async function retrieveRelevantChunks(
     throw error
   }
 
-  return (data || [])
-    .map((chunk: any) => ({
+  const chunks = (data || []) as DatabaseChunk[]
+
+  return chunks
+    .map((chunk) => ({
       id: chunk.id,
       content: chunk.content,
       metadata: chunk.metadata || {},

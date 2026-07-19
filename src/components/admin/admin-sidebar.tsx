@@ -5,10 +5,8 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
-  FileText,
   Shield,
   LogOut,
-  Lock,
   Menu,
   X,
 } from 'lucide-react'
@@ -34,13 +32,22 @@ interface AdminSidebarProps {
   adminEmail: string
 }
 
-export default function AdminSidebar({ adminName, adminEmail }: AdminSidebarProps) {
-  const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
+interface SidebarContentProps {
+  adminName: string
+  adminEmail: string
+  pathname: string
+  onLinkClick: () => void
+}
 
+function SidebarContent({
+  adminName,
+  adminEmail,
+  pathname,
+  onLinkClick,
+}: SidebarContentProps) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
-  const SidebarContent = () => (
+  return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
@@ -59,7 +66,7 @@ export default function AdminSidebar({ adminName, adminEmail }: AdminSidebarProp
           <Link
             key={item.href}
             href={item.href}
-            onClick={() => setMobileOpen(false)}
+            onClick={onLinkClick}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
               isActive(item.href)
@@ -92,6 +99,11 @@ export default function AdminSidebar({ adminName, adminEmail }: AdminSidebarProp
       </div>
     </div>
   )
+}
+
+export default function AdminSidebar({ adminName, adminEmail }: AdminSidebarProps) {
+  const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <>
@@ -119,12 +131,22 @@ export default function AdminSidebar({ adminName, adminEmail }: AdminSidebarProp
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <SidebarContent />
+        <SidebarContent
+          adminName={adminName}
+          adminEmail={adminEmail}
+          pathname={pathname}
+          onLinkClick={() => setMobileOpen(false)}
+        />
       </aside>
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
-        <SidebarContent />
+        <SidebarContent
+          adminName={adminName}
+          adminEmail={adminEmail}
+          pathname={pathname}
+          onLinkClick={() => {}}
+        />
       </aside>
     </>
   )

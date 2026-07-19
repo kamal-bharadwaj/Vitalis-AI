@@ -1,5 +1,6 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from 'next';
+import withSerwistInit from '@serwist/next';
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['10.70.44.49'],
@@ -45,7 +46,7 @@ const sentryConfig = {
 };
 
 // Serwist Config
-const withSerwist = require("@serwist/next").default({
+const withSerwist = withSerwistInit({
   swSrc: "src/sw.ts",
   swDest: "public/sw.js",
 });

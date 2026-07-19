@@ -44,6 +44,7 @@ export function useDocuments() {
   }, [supabase])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocuments()
     
     // Subscribe to realtime changes

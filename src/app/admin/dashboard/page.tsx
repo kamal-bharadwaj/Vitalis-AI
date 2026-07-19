@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import StatsCards from '@/components/admin/stats-cards'
 import PatientsTable from '@/components/admin/patients-table'
@@ -109,12 +110,12 @@ export default async function AdminDashboardPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">Recent Patients</h2>
-          <a
+          <Link
             href="/admin/patients"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             View all →
-          </a>
+          </Link>
         </div>
         <PatientsTable patients={recentPatients} />
       </div>

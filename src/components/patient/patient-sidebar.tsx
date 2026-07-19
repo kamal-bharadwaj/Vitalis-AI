@@ -50,10 +50,19 @@ interface PatientSidebarProps {
   patientEmail: string
 }
 
-export default function PatientSidebar({ patientName, patientEmail }: PatientSidebarProps) {
-  const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
+interface SidebarContentProps {
+  patientName: string
+  patientEmail: string
+  pathname: string
+  onLinkClick: () => void
+}
 
+function SidebarContent({
+  patientName,
+  patientEmail,
+  pathname,
+  onLinkClick,
+}: SidebarContentProps) {
   const isActive = (href: string) => {
     if (href === '/patient/reports') {
       // Don't match /patient/reports/upload on the "My Reports" link
@@ -62,7 +71,7 @@ export default function PatientSidebar({ patientName, patientEmail }: PatientSid
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  const SidebarContent = () => (
+  return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
@@ -81,7 +90,7 @@ export default function PatientSidebar({ patientName, patientEmail }: PatientSid
           <Link
             key={item.href}
             href={item.href}
-            onClick={() => setMobileOpen(false)}
+            onClick={onLinkClick}
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
               isActive(item.href)
@@ -114,6 +123,11 @@ export default function PatientSidebar({ patientName, patientEmail }: PatientSid
       </div>
     </div>
   )
+}
+
+export default function PatientSidebar({ patientName, patientEmail }: PatientSidebarProps) {
+  const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <>
@@ -141,12 +155,22 @@ export default function PatientSidebar({ patientName, patientEmail }: PatientSid
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <SidebarContent />
+        <SidebarContent
+          patientName={patientName}
+          patientEmail={patientEmail}
+          pathname={pathname}
+          onLinkClick={() => setMobileOpen(false)}
+        />
       </aside>
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
-        <SidebarContent />
+        <SidebarContent
+          patientName={patientName}
+          patientEmail={patientEmail}
+          pathname={pathname}
+          onLinkClick={() => {}}
+        />
       </aside>
     </>
   )
