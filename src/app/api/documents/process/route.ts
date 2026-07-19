@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUser } from '@/lib/auth-guard'
 import { parsePDF } from '@/lib/rag/parser'
 import { chunkText } from '@/lib/rag/chunker'
+import { embedTexts } from '@/lib/rag/embedder'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -61,12 +62,16 @@ export async function POST(request: Request) {
       overlapTokens: 75,
     })
 
-    // 6. Insert chunks (Embeddings will be added in Phase 6)
-    const chunksToInsert = chunks.map(chunk => ({
+    // 6. Generate embeddings for the chunks
+    const chunkContents = chunks.map(c => c.content)
+    const embeddings = chunkContents.length > 0 ? await embedTexts(chunkContents) : []
+
+    const chunksToInsert = chunks.map((chunk, index) => ({
       document_id: documentId,
       patient_id: user.id,
       content: chunk.content,
       chunk_index: chunk.chunkIndex,
+      embedding: embeddings[index],
       metadata: { ...chunk.metadata, ...parsedDoc.metadata },
     }))
 
