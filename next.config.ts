@@ -42,13 +42,13 @@ const sentryConfig = {
   silent: !process.env.CI,
   widenClientFileUpload: true,
   hideSourceMaps: true,
-  disableLogger: true,
 };
 
 // Serwist Config
 const withSerwist = withSerwistInit({
   swSrc: "src/sw.ts",
   swDest: "public/sw.js",
+  disable: process.env.NODE_ENV !== "production",
 });
 
 export default withSentryConfig(withSerwist(nextConfig), sentryConfig);
