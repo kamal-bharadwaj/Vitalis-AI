@@ -21,13 +21,13 @@ export async function login(formData: FormData) {
   const password = formData.get('password') as string
   const ip = await getClientIp()
 
-  // Validate input — Zod v4 uses .issues instead of .errors
+  // Validate input
   const result = loginSchema.safeParse({ email, password })
   if (!result.success) {
     return { error: result.error.issues[0]?.message ?? 'Invalid input' }
   }
 
-  // Rate limit by email
+  // Rate limit check
   try {
     await loginLimiter.consume(email)
   } catch {
@@ -42,22 +42,47 @@ export async function login(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Log failed login (without exposing reason to user)
+    // Log failed login
     logAction({ action: 'login_failed', details: { email, reason: 'invalid_credentials' }, ipAddress: ip })
-    // Generic error to prevent user enumeration
     return { error: 'Invalid email or password.' }
+  }
+
+  // On success, reset rate-limiter for this email
+  try {
+    await loginLimiter.delete(email)
+  } catch {
+    // Ignore error if key not found
+  }
+
+  // Determine user role and redirect directly to appropriate dashboard
+  const user = data.user
+  let targetPath = '/patient/dashboard'
+
+  if (user) {
+    const roleFromMeta = user.user_metadata?.role
+    if (roleFromMeta === 'admin') {
+      targetPath = '/admin/dashboard'
+    } else {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (profile?.role === 'admin') {
+        targetPath = '/admin/dashboard'
+      }
+    }
   }
 
   // Log successful login
   logAction({
-    userId: data.user?.id,
+    userId: user?.id,
     action: 'login',
-    details: { email },
+    details: { email, role: targetPath.includes('admin') ? 'admin' : 'patient' },
     ipAddress: ip,
   })
 
-  // Role redirection is handled by middleware
-  redirect('/')
+  redirect(targetPath)
 }
 
 export async function register(formData: FormData) {
@@ -76,7 +101,6 @@ export async function register(formData: FormData) {
     acceptDataProcessing: acceptDataRaw === 'on' ? (true as const) : (false as unknown as true),
   }
 
-  // Zod v4 uses .issues instead of .errors
   const result = registerSchema.safeParse(rawData)
   if (!result.success) {
     return { error: result.error.issues[0]?.message ?? 'Invalid input' }
