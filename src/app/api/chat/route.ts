@@ -37,9 +37,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No user message found' }, { status: 400 })
     }
 
-    // RAG: embed the user question and retrieve relevant chunks
-    const [embedding] = await Promise.all([embedText(latestUserMsg.content)])
-    const chunks = await retrieveRelevantChunks(embedding, user.id, 6, 0.45)
+    // RAG: embed the user question and retrieve relevant chunks (catch embedding/retrieval errors gracefully)
+    let chunks: Awaited<ReturnType<typeof retrieveRelevantChunks>> = []
+    try {
+      const embedding = await embedText(latestUserMsg.content)
+      chunks = await retrieveRelevantChunks(embedding, user.id, 6, 0.35)
+    } catch (ragErr) {
+      console.warn('RAG retrieval notice:', ragErr)
+      // Continue without chunks if vector search has an issue
+    }
 
     // Build history (all messages except the latest user message)
     const chatHistory = messages.slice(0, -1).map((m) => ({
@@ -49,27 +55,39 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildPrompt(chunks, latestUserMsg.content)
 
-    const MEDICAL_SYSTEM_PROMPT = `You are Vitalis, a helpful medical report assistant. Answer patient questions STRICTLY based on the medical report data provided in the context below.
+    const MEDICAL_SYSTEM_PROMPT = `You are Vitalis, a helpful and compassionate AI medical assistant. Your primary job is to help patients understand their uploaded medical reports, lab results, and general health questions.
 
-RULES:
-1. Only answer using information from the provided context.
-2. If the context does not contain the answer, say "I could not find this information in your uploaded reports. Please ensure the relevant report has been uploaded and processed."
-3. Never make up medical information or provide diagnoses.
-4. Always mention which report or section your answer comes from when referencing data.
-5. Use clear, patient-friendly language. Explain medical terms when used.
-6. If a value is abnormal, mention the normal range for reference.
-7. Be concise but thorough.`
+GUIDELINES:
+1. GREETINGS & INTRODUCTIONS: If the user says hello, asks "who are you?", or asks basic general questions, respond warmly and introduce yourself as Vitalis, their AI health and report assistant.
+2. REPORT CONTEXT: When answering questions about specific lab results, test metrics, or uploaded documents, use the provided report context. Always reference the report name/section when available.
+3. GENERAL HEALTH EDUCATION: If a user asks general health questions (e.g., diet recommendations, general symptom explanations), provide helpful, clear, patient-friendly guidance based on established medical knowledge, while reminding them to consult their primary healthcare provider.
+4. UNKNOWN REPORT DATA: If the user asks about specific test values not present in their context, let them know clearly that those specific values were not found in their current uploaded reports.
+5. SAFETY: Never issue formal medical diagnoses or prescribe specific medical dosages. Encourage patients to verify test results with their physician.`
 
-    const result = streamText({
-      model: google('gemini-2.5-flash'),
-      system: MEDICAL_SYSTEM_PROMPT,
-      messages: [
-        ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: prompt },
-      ],
-    })
+    // Use Gemini 3.5 Flash Standard model
+    let result
+    try {
+      result = streamText({
+        model: google('gemini-3.5-flash'),
+        system: MEDICAL_SYSTEM_PROMPT,
+        messages: [
+          ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
+          { role: 'user' as const, content: prompt },
+        ],
+      })
+    } catch (modelErr) {
+      console.warn('Primary model gemini-3.5-flash failed, falling back to gemini-3.1-flash-lite:', modelErr)
+      result = streamText({
+        model: google('gemini-3.1-flash-lite'),
+        system: MEDICAL_SYSTEM_PROMPT,
+        messages: [
+          ...chatHistory.map((m) => ({ role: m.role, content: m.content })),
+          { role: 'user' as const, content: prompt },
+        ],
+      })
+    }
 
-    // Persist the user message to Supabase (fire and forget)
+    // Persist the user message to Supabase
     const userMsgContent = latestUserMsg.content
     const sourcesPayload = chunks.map((c) => ({
       id: c.id,
@@ -101,25 +119,27 @@ RULES:
 
     // After the stream completes, save the AI response
     void Promise.resolve(result.text).then(async (fullText) => {
-      await supabase.from('chat_messages').insert({
-        session_id: sessionId,
-        patient_id: user.id,
-        role: 'assistant',
-        content: fullText,
-        sources: sourcesPayload,
-      })
+      if (fullText && fullText.trim()) {
+        await supabase.from('chat_messages').insert({
+          session_id: sessionId,
+          patient_id: user.id,
+          role: 'assistant',
+          content: fullText,
+          sources: sourcesPayload,
+        })
 
-      // Auto-title the session from the first message
-      const { count } = await supabase
-        .from('chat_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', sessionId)
+        // Auto-title the session from the first message
+        const { count } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('session_id', sessionId)
 
-      if ((count ?? 0) <= 2) {
-        const title = userMsgContent.length > 60
-          ? userMsgContent.slice(0, 57) + '...'
-          : userMsgContent
-        await supabase.from('chat_sessions').update({ title }).eq('id', sessionId)
+        if ((count ?? 0) <= 2) {
+          const title = userMsgContent.length > 60
+            ? userMsgContent.slice(0, 57) + '...'
+            : userMsgContent
+          await supabase.from('chat_sessions').update({ title }).eq('id', sessionId)
+        }
       }
     }).catch((err: unknown) => {
       Sentry.captureException(err)

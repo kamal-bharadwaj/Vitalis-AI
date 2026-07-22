@@ -34,6 +34,7 @@ function SourceCard({ source }: { source: Source }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden text-xs">
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-muted/50 hover:bg-muted transition-colors text-left"
       >
@@ -66,6 +67,11 @@ function SourceCard({ source }: { source: Source }) {
 function MessageBubble({ msg }: { msg: LocalMessage }) {
   const isUser = msg.role === 'user'
 
+  // Don't render an empty streaming bubble if no content has arrived yet (loading indicator handles it)
+  if (!isUser && msg.isStreaming && !msg.content && !msg.error) {
+    return null
+  }
+
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
@@ -80,26 +86,26 @@ function MessageBubble({ msg }: { msg: LocalMessage }) {
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-2 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col gap-2 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
             isUser
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
               : msg.error
               ? 'bg-destructive/10 text-destructive border border-destructive/20 rounded-tl-sm'
-              : 'bg-card border border-border text-card-foreground rounded-tl-sm'
+              : 'bg-card border border-border text-card-foreground rounded-tl-sm shadow-sm'
           }`}
         >
           {msg.error ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-destructive">
               <AlertCircle className="size-4 shrink-0" />
-              <span>{msg.content}</span>
+              <span>{msg.content || 'Something went wrong. Please try again.'}</span>
             </div>
           ) : (
             <>
               {msg.content}
               {msg.isStreaming && (
-                <span className="inline-block w-0.5 h-4 ml-0.5 bg-current animate-pulse align-middle" />
+                <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
               )}
             </>
           )}
@@ -107,7 +113,7 @@ function MessageBubble({ msg }: { msg: LocalMessage }) {
 
         {/* Sources attribution */}
         {!isUser && msg.sources && msg.sources.length > 0 && !msg.isStreaming && (
-          <div className="w-full space-y-1.5">
+          <div className="w-full space-y-1.5 mt-1">
             <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">
               Sources used
             </p>
@@ -142,7 +148,7 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
   // Auto-scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, isLoading])
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -156,7 +162,7 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
     const text = input.trim()
     if (!text || isLoading) return
 
-    // Append user message
+    // Append user message + empty assistant placeholder
     const userMsgId = crypto.randomUUID()
     const assistantMsgId = crypto.randomUUID()
 
@@ -186,11 +192,22 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
         signal: abortRef.current.signal,
       })
 
-      if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      if (!res.ok) {
+        let errMessage = `HTTP ${res.status}`
+        try {
+          const errJson = await res.json()
+          if (errJson?.error) errMessage = errJson.error
+        } catch {
+          // ignore
+        }
+        throw new Error(errMessage)
       }
 
-      // Parse AI SDK v7 UIMessageStream SSE format manually
+      if (!res.body) {
+        throw new Error('No response stream received')
+      }
+
+      // Read SSE stream
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
@@ -205,15 +222,24 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
         buffer = lines.pop() ?? ''
 
         for (const line of lines) {
-          if (!line.startsWith('data: ') || line === 'data: [DONE]') continue
-          const raw = line.slice(6).trim()
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('data:') || trimmed === 'data: [DONE]') continue
+          const raw = trimmed.slice(5).trim()
           if (!raw) continue
 
           try {
-            const chunk = JSON.parse(raw) as { type: string; textDelta?: string; text?: string }
-            // AI SDK v7 chunk types: 'text-delta', 'step-start', 'finish', etc.
-            if (chunk.type === 'text-delta' && chunk.textDelta) {
-              fullText += chunk.textDelta
+            const chunk = JSON.parse(raw) as {
+              type: string
+              delta?: string
+              textDelta?: string
+              text?: string
+              content?: string
+            }
+
+            // Extract delta from AI SDK v7 chunk format
+            const textPart = chunk.delta ?? chunk.textDelta ?? chunk.text ?? chunk.content
+            if (textPart) {
+              fullText += textPart
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantMsgId
@@ -223,16 +249,20 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
               )
             }
           } catch {
-            // Skip malformed chunks
+            // Ignore unparseable chunks
           }
         }
       }
 
-      // Mark done
+      // Mark streaming complete
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsgId
-            ? { ...m, content: fullText || m.content, isStreaming: false }
+            ? {
+                ...m,
+                content: fullText || 'No response generated.',
+                isStreaming: false,
+              }
             : m
         )
       )
@@ -244,12 +274,13 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
           )
         )
       } else {
+        const errorMessage = err instanceof Error ? err.message : 'Connection failed. Please try again.'
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsgId
               ? {
                   ...m,
-                  content: 'Something went wrong. Please try again.',
+                  content: errorMessage,
                   isStreaming: false,
                   error: true,
                 }
@@ -275,33 +306,35 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6 space-y-6">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16">
-            <div className="size-16 rounded-full bg-sidebar-primary/10 flex items-center justify-center">
-              <Bot className="size-8 text-sidebar-primary" />
+            <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Bot className="size-8 text-primary" />
             </div>
             <div>
               <p className="font-semibold text-foreground text-lg">Ask Vitalis anything</p>
               <p className="text-sm text-muted-foreground max-w-xs mt-1">
-                Questions about your reports will be answered from your uploaded medical documents.
+                Ask about your medical reports, diet recommendations, or health questions.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 justify-center mt-2">
+            <div className="flex flex-wrap gap-2 justify-center mt-2 max-w-lg">
               {[
+                'What to eat when we got chronic kidney disease?',
+                'Who are you?',
                 'What was my blood sugar level?',
                 'Summarise my diagnosis',
-                'What medications were prescribed?',
               ].map((q) => (
                 <button
                   key={q}
+                  type="button"
                   onClick={() => {
                     setInput(q)
                     textareaRef.current?.focus()
                   }}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted transition-colors text-foreground"
+                  className="text-xs px-3 py-2 rounded-xl border border-border bg-card hover:bg-muted transition-colors text-foreground shadow-sm"
                 >
                   {q}
                 </button>
@@ -320,9 +353,9 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
             <div className="size-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center shrink-0">
               <Bot className="size-4" />
             </div>
-            <div className="bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Vitalis is thinking…</span>
+            <div className="bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2.5 shadow-sm">
+              <Loader2 className="size-4 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground font-medium">Vitalis is thinking…</span>
             </div>
           </div>
         )}
@@ -332,20 +365,21 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
 
       {/* Input */}
       <div className="border-t border-border bg-background px-4 md:px-6 py-4">
-        <div className="flex items-end gap-3 bg-card border border-border rounded-2xl px-4 py-3 focus-within:border-primary/50 transition-colors">
+        <div className="flex items-end gap-3 bg-card border border-border rounded-2xl px-4 py-3 focus-within:border-primary/50 transition-colors shadow-sm">
           <textarea
             ref={textareaRef}
             id="chat-input"
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about your medical reports…"
+            placeholder="Ask about your medical reports or health questions…"
             rows={1}
             disabled={isLoading}
             className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none min-h-[24px] max-h-40 disabled:opacity-60"
           />
           {isLoading ? (
             <button
+              type="button"
               onClick={handleStop}
               id="stop-btn"
               className="size-8 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center justify-center shrink-0"
@@ -355,10 +389,11 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
             </button>
           ) : (
             <button
+              type="button"
               onClick={sendMessage}
               id="send-btn"
               disabled={!input.trim()}
-              className="size-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center shrink-0"
+              className="size-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center shrink-0 shadow-sm"
               title="Send message (Enter)"
             >
               <Send className="size-4" />
@@ -366,7 +401,7 @@ export default function ChatInterface({ sessionId, initialMessages }: ChatInterf
           )}
         </div>
         <p className="text-[11px] text-muted-foreground text-center mt-2">
-          Answers are based on your uploaded reports only. Not a substitute for medical advice.
+          Answers provide health information based on medical context. Always consult a healthcare professional for personalized medical advice.
         </p>
       </div>
     </div>
