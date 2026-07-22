@@ -1,51 +1,62 @@
 import { Metadata } from 'next'
-import Link from 'next/link'
-import { MessageSquare, Plus } from 'lucide-react'
+import { getChatSessions } from '@/app/actions/chat'
+import ChatSessionsList from '@/components/patient/chat-sessions-list'
+import { Bot, Sparkles } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'Chat',
+  title: 'Chat — Vitalis',
+  description: 'Ask MedicBot questions about your medical reports using AI.',
 }
 
-export default function PatientChatPage() {
-  return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Chat</h1>
-          <p className="text-muted-foreground mt-1">Ask questions about your medical reports</p>
-        </div>
-        <button
-          id="new-chat-btn"
-          disabled
-          className="flex items-center gap-2 bg-primary text-primary-foreground opacity-60 cursor-not-allowed px-4 py-2.5 rounded-lg text-sm font-semibold shrink-0"
-          title="Coming in Phase 4"
-        >
-          <Plus className="size-4" />
-          New Chat
-        </button>
-      </div>
+export default async function PatientChatPage() {
+  const sessions = await getChatSessions()
 
-      <div className="bg-card border border-dashed border-border rounded-xl py-16 flex flex-col items-center gap-4 text-center">
-        <div className="size-14 rounded-full bg-muted flex items-center justify-center">
-          <MessageSquare className="size-7 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="font-semibold text-foreground mb-1">AI Chat — Coming in Phase 4</p>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Once your reports are uploaded and processed, you&apos;ll be able to ask MedicBot
-            questions like &ldquo;What was my blood sugar level?&rdquo; or &ldquo;Summarise my diagnosis.&rdquo;
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar: session list */}
+      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-background h-full">
+        <ChatSessionsList sessions={sessions} />
+      </aside>
+
+      {/* Main: welcome / empty state */}
+      <main className="flex-1 flex items-center justify-center bg-muted/30 p-8">
+        <div className="max-w-md text-center space-y-5">
+          <div className="mx-auto size-20 rounded-full bg-gradient-to-br from-sidebar-primary to-primary/70 flex items-center justify-center shadow-lg">
+            <Bot className="size-10 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
+              <Sparkles className="size-5 text-primary" />
+              Ask Vitalis
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Start a new conversation or select an existing one to ask questions
+              about your medical reports.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 text-left text-sm">
+            {[
+              '🩸 "What was my blood sugar level?"',
+              '💊 "Which medications were prescribed?"',
+              '📋 "Summarise my latest diagnosis"',
+              '❓ "What does my LDL result mean?"',
+            ].map((q) => (
+              <div
+                key={q}
+                className="bg-card border border-border rounded-lg px-4 py-2.5 text-foreground/80"
+              >
+                {q}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Answers are sourced only from your uploaded reports — not general knowledge.
           </p>
         </div>
-        <Link
-          href="/patient/reports/upload"
-          className="inline-flex items-center gap-2 border border-border hover:bg-muted transition-colors px-5 py-2.5 rounded-lg text-sm font-semibold text-foreground"
-        >
-          Upload a Report First
-        </Link>
-      </div>
+      </main>
     </div>
   )
 }

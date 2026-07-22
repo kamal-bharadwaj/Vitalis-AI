@@ -10,7 +10,7 @@ export default async function PatientLayout({
   const user = await requirePatient()
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <PatientSidebar
         patientName={user.user_metadata?.full_name || user.email || 'Patient'}
         patientEmail={user.email || ''}

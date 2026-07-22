@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Shield,
+  ScrollText,
   LogOut,
   Menu,
   X,
@@ -24,6 +25,11 @@ const navItems = [
     label: 'Patients',
     href: '/admin/patients',
     icon: Users,
+  },
+  {
+    label: 'Audit Logs',
+    href: '/admin/audit-logs',
+    icon: ScrollText,
   },
 ]
 
